@@ -98,6 +98,7 @@ pipeline {
     stage("Replace") {
       steps {
         script {
+          sh "sudo mkdir -p ${env.helmChartDir}/values"
           replaceChart()
           replaceValue()
           replaceDeployment()
@@ -112,17 +113,8 @@ pipeline {
         script {
           try {
             echo "Package - Starting."
-            try {
-              sh "sudo mkdir ${env.helmChartDir}/assets"
-            } catch(err) {
-              echo "assets folder already exists"
-            }
-            try {
-              sh "sudo mkdir ${env.helmChartDir}/values"
-            } catch(err) {
-              echo "assets folder already exists"
-            }
             sh """
+              sudo mkdir -p ${env.helmChartDir}/assets
               sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
               sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
               ls ${env.helmChartDir}/temp
