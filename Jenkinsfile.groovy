@@ -1,0 +1,168 @@
+// METHODS FOR REPLACEMENT
+def replaceTemplate(String fileName, String outputPath, Map replacementMap) {
+  def content = readFile("${env.currentDir}/helm-template/${fileName}")
+  replacementMap.each { key, value -> content = content.replace(key, value) }
+  writeFile file: outputPath, text: content
+}
+
+def replaceChart() {
+  replaceTemplate("Chart.yaml", "${env.currentDir}/helm-chart/Chart.yaml", ["{{chartVersion}}": "${env.chartVersion}"])
+}
+
+def replaceValue() {
+  replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
+  if (params.releaseTag) {
+    replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-pre.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPre}"])
+    replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-pro.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPro}"])
+  }
+}
+
+def replaceDeployment() {
+  if (params.releaseTag) {
+    replaceTemplate("deployment.yaml", "${env.currentDir}/helm-chart/templates/deployment.yaml", ["{{IMAGE_REPO}}": "{{.Values.image.repository}}"]).yaml
+  } else {
+    replaceTemplate("deployment.yaml", "${env.currentDir}/helm-chart/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
+  }
+}
+
+// METHODS FOR HELM
+def helmUpgrade() {
+  sh """
+    sudo helm repo update ${env.chartRepoName}
+    sudo helm upgrade --install bcc-ui ${env.chartRepoName}/${env.chartName} --namespace ${params.namespace} --create-namespace --version ${env.chartVersion} --kubeconfig ${env.kubeConfigDir} --debug --atomic --timeout 2m0s
+  """
+}
+
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'namespace', defaultValue: params.namespace, description: 'Please fill namespace.')
+    string(name: 'chartVersion', defaultValue: params.chartVersion, description: 'Please fill version.')
+    choice(name: 'buildType', choices: ['alpha'], description: 'Please select build type.')
+    booleanParam(name: 'releaseTag', description: '')
+  }
+
+  environment {
+    currentDir = sh(script: 'sudo pwd', returnStdout: true).trim()
+    helmChartDir = "${env.currentDir}/helm-chart"
+    kubeConfigDir = "/root/.kube/Config"
+
+    gitCredentialId = "GITHUB-jenkins"
+    gitBranch = "main"
+    gitRepoUrl = "https://github.com/pongsathorn-ph/bcc-ui.git"
+
+    chartRepoName = "demo-repo"
+    chartRepoUrl = "https://pongsathorn-ph.github.io/bcc-ui/helm-chart/"
+    chartName = "bcc-ui-chart"
+    currentBuild = String.format("%04d", currentBuild.number)
+    chartVersion = "${params.chartVersion}-${env.currentBuild}-${params.buildType}"
+
+    imageRepoDev = "pongsathorn/demo-ui-dev"
+    imageRepoPre = "pongsathorn/demo-ui-pre"
+    imageRepoPro = "pongsathorn/demo-ui-pro"
+  }
+
+  stages {
+
+    stage("Initial") {
+      steps {
+        script {
+          if (params.releaseTag) {
+            withEnv(['chartVersion='+params.chartVersion+'-'+env.currentBuild]) {
+              echo "Release tag: ${params.releaseTag}"
+              echo "Chart version: ${env.chartVersion}"
+            }
+          }
+        }
+      }
+    }
+
+    stage("Checkout") {
+      steps {
+        script {
+          try {
+            cleanWs()
+            checkout([$class: 'GitSCM', branches: [[name: "${env.gitBranch}"]], extensions: [], userRemoteConfigs: [[credentialsId: "${env.gitCredentialId}", url: "${env.gitRepoUrl}"]]])
+            echo "Checkout - Completed."
+          } catch (err) {
+            echo "Checkout - Failed."
+          }
+        }
+      }
+    }
+
+    stage("Replace") {
+      steps {
+        script {
+          replaceChart()
+          replaceValue()
+          replaceDeployment()
+          sh "sudo cp ${env.currentDir}/helm-template/service.yaml ${env.currentDir}/helm-chart/templates"
+          sh "sudo ls -al ${env.currentDir}/helm-chart"
+        }
+      }
+    }
+
+    stage("Package") {
+      steps {
+        script {
+          try {
+            echo "Package - Starting."
+            sh """
+              sudo mkdir -p ${env.helmChartDir}/assets || echo "Directory already exists."
+              sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
+              sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
+              ls ${env.helmChartDir}/temp
+              sudo mv ${env.helmChartDir}/temp/${env.chartName}-*.tgz ${env.helmChartDir}/assets
+              sudo mv ${env.helmChartDir}/temp/index.yaml ${env.helmChartDir}/
+              sudo rm -rf ${env.helmChartDir}/temp
+            """
+            echo "Package - Completed."
+          } catch (err) {
+            echo "Package - Failed."
+          }
+        }
+      }
+    }
+
+    stage("Git commit and push") {
+      steps {
+        script {
+          try {
+            sh """
+              git config --global user.name 'Jenkins Pipeline'
+              git config --global user.email 'jenkins@localhost'
+              git checkout -b ${env.gitBranch}
+              git add .
+              git commit -m 'Update from Jenkins-Pipeline'
+            """
+            withCredentials([gitUsernamePassword(credentialsId: "${gitCredentialId}", gitToolName: 'Default')]) {
+              sh "git push origin ${gitBranch}"
+            }
+          } catch(err) {
+            echo "GIT - Failed."
+          }
+        }
+      }
+    }
+/*
+    stage("Helm install") {
+      steps {
+        script {
+          try {
+            sleep 60
+            sh "sudo helm repo add ${env.chartRepoName} ${env.chartRepoUrl}"
+            helmUpgrade()
+          } catch (err) {
+            retry(2) {
+              sleep 60
+              helmUpgrade()
+            }
+          }
+        }
+      }
+    }
+*/
+  }
+}
