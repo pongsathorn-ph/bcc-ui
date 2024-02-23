@@ -75,17 +75,6 @@ pipeline {
               echo "Chart version: ${env.chartVersion}"
             }
           }
-
-          try {
-            sh "sudo mkdir ${env.helmChartDir}/assets"
-          } catch(err) {
-            echo "assets folder already exists"
-          }
-          try {
-            sh "sudo mkdir ${env.helmChartDir}/values"
-          } catch(err) {
-            echo "assets folder already exists"
-          }
         }
       }
     }
@@ -123,6 +112,16 @@ pipeline {
         script {
           try {
             echo "Package - Starting."
+            try {
+              sh "sudo mkdir ${env.helmChartDir}/assets"
+            } catch(err) {
+              echo "assets folder already exists"
+            }
+            try {
+              sh "sudo mkdir ${env.helmChartDir}/values"
+            } catch(err) {
+              echo "assets folder already exists"
+            }
             sh """
               sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
               sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
