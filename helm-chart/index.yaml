@@ -3,6 +3,16 @@ entries:
   bcc-ui-chart:
   - apiVersion: v2
     appVersion: 0.0.1
+    created: "2024-02-23T06:19:40.56919746Z"
+    description: A Helm chart for Kubernetes
+    digest: 22632044c7086d127b6e84e89dab5fc550daed34818eebf4d18a4db6129245c6
+    name: bcc-ui-chart
+    type: application
+    urls:
+    - assets/bcc-ui-chart-2024.02.00-0006-alpha.tgz
+    version: 2024.02.00-0006-alpha
+  - apiVersion: v2
+    appVersion: 0.0.1
     created: "2024-02-23T06:18:33.067802716Z"
     description: A Helm chart for Kubernetes
     digest: f1c050524c63bf53abf0c7fb0dab5d11b84b5e88939b54ecb1ce57e8202d2572
@@ -11,4 +21,4 @@ entries:
     urls:
     - assets/bcc-ui-chart-2024.02.00-0005-alpha.tgz
     version: 2024.02.00-0005-alpha
-generated: "2024-02-23T06:18:33.067631795Z"
+generated: "2024-02-23T06:19:40.568950991Z"
