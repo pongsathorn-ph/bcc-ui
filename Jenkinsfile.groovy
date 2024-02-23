@@ -1,27 +1,27 @@
 // METHODS FOR REPLACEMENT
 def replaceTemplate(String fileName, String outputPath, Map replacementMap) {
-  def content = readFile("${env.currentDir}/helm-template/${fileName}")
+  def content = readFile("${env.helmTemplateDir}/${fileName}")
   replacementMap.each { key, value -> content = content.replace(key, value) }
   writeFile file: outputPath, text: content
 }
 
 def replaceChart() {
-  replaceTemplate("Chart.yaml", "${env.currentDir}/helm-chart/Chart.yaml", ["{{chartVersion}}": "${env.chartVersion}"])
+  replaceTemplate("Chart.yaml", "${env.helmChartDir}/Chart.yaml", ["{{CHART_VERSION}}": "${env.chartVersion}"])
 }
 
 def replaceValue() {
-  replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
+  replaceTemplate("values.yaml", "${env.helmChartDir}/values/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
   if (params.releaseTag) {
-    replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-pre.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPre}"])
-    replaceTemplate("values.yaml", "${env.currentDir}/helm-chart/values-pro.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPro}"])
+    replaceTemplate("values.yaml", "${env.helmChartDir}/values/values-pre.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPre}"])
+    replaceTemplate("values.yaml", "${env.helmChartDir}/values/values-pro.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoPro}"])
   }
 }
 
 def replaceDeployment() {
   if (params.releaseTag) {
-    replaceTemplate("deployment.yaml", "${env.currentDir}/helm-chart/templates/deployment.yaml", ["{{IMAGE_REPO}}": "{{.Values.image.repository}}"]).yaml
+    replaceTemplate("deployment.yaml", "${env.helmChartDir}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "{{.Values.image.repository}}"]).yaml
   } else {
-    replaceTemplate("deployment.yaml", "${env.currentDir}/helm-chart/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
+    replaceTemplate("deployment.yaml", "${env.helmChartDir}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
   }
 }
 
@@ -46,6 +46,7 @@ pipeline {
   environment {
     currentDir = sh(script: 'sudo pwd', returnStdout: true).trim()
     helmChartDir = "${env.currentDir}/helm-chart"
+    helmTemplateDir = "${env.currentDir}/helm-template"
     kubeConfigDir = "/root/.kube/Config"
 
     gitCredentialId = "GITHUB-jenkins"
@@ -68,8 +69,12 @@ pipeline {
     stage("Initial") {
       steps {
         script {
+          sh """
+            sudo mkdir -p ${env.helmChartDir}/assets || echo "Directory already exists."
+            sudo mkdir -p ${env.helmChartDir}/values || echo "Directory already exists."
+          """
           if (params.releaseTag) {
-            withEnv(['chartVersion='+params.chartVersion+'-'+env.currentBuild]) {
+            withEnv(["chartVersion=${params.chartVersion}-${env.currentBuild}"]) {
               echo "Release tag: ${params.releaseTag}"
               echo "Chart version: ${env.chartVersion}"
             }
@@ -87,6 +92,8 @@ pipeline {
             echo "Checkout - Completed."
           } catch (err) {
             echo "Checkout - Failed."
+            currentBuild.result = 'FAILURE'
+            error('Checkout stage failed.')
           }
         }
       }
@@ -98,8 +105,8 @@ pipeline {
           replaceChart()
           replaceValue()
           replaceDeployment()
-          sh "sudo cp ${env.currentDir}/helm-template/service.yaml ${env.currentDir}/helm-chart/templates"
-          sh "sudo ls -al ${env.currentDir}/helm-chart"
+          sh "sudo cp ${env.helmTemplateDir}/service.yaml ${env.helmChartDir}/templates"
+          sh "sudo ls -al ${env.helmChartDir}"
         }
       }
     }
@@ -110,7 +117,6 @@ pipeline {
           try {
             echo "Package - Starting."
             sh """
-              sudo mkdir -p ${env.helmChartDir}/assets || echo "Directory already exists."
               sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
               sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
               ls ${env.helmChartDir}/temp
@@ -121,6 +127,8 @@ pipeline {
             echo "Package - Completed."
           } catch (err) {
             echo "Package - Failed."
+            currentBuild.result = 'FAILURE'
+            error('Package stage failed.')
           }
         }
       }
@@ -137,11 +145,13 @@ pipeline {
               git add .
               git commit -m 'Update from Jenkins-Pipeline'
             """
-            withCredentials([gitUsernamePassword(credentialsId: "${gitCredentialId}", gitToolName: 'Default')]) {
-              sh "git push origin ${gitBranch}"
+            withCredentials([gitUsernamePassword(credentialsId: "${env.gitCredentialId}", gitToolName: 'Default')]) {
+              sh "git push origin ${env.gitBranch}"
             }
           } catch(err) {
             echo "GIT - Failed."
+            currentBuild.result = 'FAILURE'
+            error('Git stage failed.')
           }
         }
       }
