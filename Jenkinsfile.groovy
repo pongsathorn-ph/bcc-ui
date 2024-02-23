@@ -37,7 +37,7 @@ pipeline {
   agent any
 
   parameters {
-    string(name: 'namespace', defaultValue: params.namespace, description: 'Please fill namespace.')
+    // string(name: 'namespace', defaultValue: params.namespace, description: 'Please fill namespace.')
     string(name: 'chartVersion', defaultValue: params.chartVersion, description: 'Please fill version.')
     choice(name: 'buildType', choices: ['alpha'], description: 'Please select build type.')
     booleanParam(name: 'releaseTag', description: '')
