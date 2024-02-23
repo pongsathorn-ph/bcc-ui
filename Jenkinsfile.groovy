@@ -69,20 +69,22 @@ pipeline {
     stage("Initial") {
       steps {
         script {
-          sh """
-            if [[ ! -d "${env.helmChartDir}/assets" ]]; then
-              sudo mkdir ${env.helmChartDir}/assets"
-            fi
-
-            if [[ ! -d "${env.helmChartDir}/values" ]]; then
-              sudo mkdir -p ${env.helmChartDir}/values"
-            fi
-          """
           if (params.releaseTag) {
             withEnv(["chartVersion=${params.chartVersion}-${env.currentBuild}"]) {
               echo "Release tag: ${params.releaseTag}"
               echo "Chart version: ${env.chartVersion}"
             }
+          }
+
+          try {
+            sh "sudo mkdir ${env.helmChartDir}/assets"
+          } catch(err) {
+            echo "assets folder already exists"
+          }
+          try {
+            sh "sudo mkdir ${env.helmChartDir}/values"
+          } catch(err) {
+            echo "assets folder already exists"
           }
         }
       }
@@ -124,10 +126,10 @@ pipeline {
             sh """
               sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
               sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
-              # ls ${env.helmChartDir}/temp
-              # sudo mv ${env.helmChartDir}/temp/${env.chartName}-*.tgz ${env.helmChartDir}/assets
-              # sudo mv ${env.helmChartDir}/temp/index.yaml ${env.helmChartDir}/
-              # sudo rm -rf ${env.helmChartDir}/temp
+              ls ${env.helmChartDir}/temp
+              sudo mv ${env.helmChartDir}/temp/${env.chartName}-*.tgz ${env.helmChartDir}/assets
+              sudo mv ${env.helmChartDir}/temp/index.yaml ${env.helmChartDir}/
+              sudo rm -rf ${env.helmChartDir}/temp
             """
             echo "Package - Completed."
           } catch (err) {
