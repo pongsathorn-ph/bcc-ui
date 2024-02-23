@@ -119,10 +119,10 @@ pipeline {
             sh """
               sudo helm package ${env.helmChartDir} -d ${env.helmChartDir}/temp
               sudo helm repo index --url assets --merge ${env.helmChartDir}/index.yaml ${env.helmChartDir}/temp
-              ls ${env.helmChartDir}/temp
-              sudo mv ${env.helmChartDir}/temp/${env.chartName}-*.tgz ${env.helmChartDir}/assets
-              sudo mv ${env.helmChartDir}/temp/index.yaml ${env.helmChartDir}/
-              sudo rm -rf ${env.helmChartDir}/temp
+              # ls ${env.helmChartDir}/temp
+              # sudo mv ${env.helmChartDir}/temp/${env.chartName}-*.tgz ${env.helmChartDir}/assets
+              # sudo mv ${env.helmChartDir}/temp/index.yaml ${env.helmChartDir}/
+              # sudo rm -rf ${env.helmChartDir}/temp
             """
             echo "Package - Completed."
           } catch (err) {
