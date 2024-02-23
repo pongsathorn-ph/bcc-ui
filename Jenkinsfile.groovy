@@ -70,8 +70,13 @@ pipeline {
       steps {
         script {
           sh """
-            sudo mkdir -p ${env.helmChartDir}/assets || echo "Directory already exists."
-            sudo mkdir -p ${env.helmChartDir}/values || echo "Directory already exists."
+            if [[ ! -d "${env.helmChartDir}/assets" ]]; then
+              sudo mkdir ${env.helmChartDir}/assets"
+            fi
+
+            if [[ ! -d "${env.helmChartDir}/values" ]]; then
+              sudo mkdir -p ${env.helmChartDir}/values"
+            fi
           """
           if (params.releaseTag) {
             withEnv(["chartVersion=${params.chartVersion}-${env.currentBuild}"]) {
