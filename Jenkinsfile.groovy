@@ -29,7 +29,7 @@ def replaceDeployment() {
 def helmUpgrade() {
   sh """
     sudo helm repo update ${env.chartRepoName}
-    sudo helm upgrade --install bcc-ui ${env.chartRepoName}/${env.chartName} --namespace ${params.namespace} --create-namespace --version ${env.chartVersion} --kubeconfig ${env.kubeConfigDir} --debug --atomic --timeout 2m0s
+    sudo helm upgrade --install cp-ui ${env.chartRepoName}/${env.chartName} --namespace ${params.namespace} --create-namespace --version ${env.chartVersion} --kubeconfig ${env.kubeConfigDir} --debug --atomic --timeout 2m0s
   """
 }
 
@@ -51,11 +51,11 @@ pipeline {
 
     gitCredentialId = "GITHUB-jenkins"
     gitBranch = "main"
-    gitRepoUrl = "https://github.com/pongsathorn-ph/bcc-ui.git"
+    gitRepoUrl = "https://github.com/pongsathorn-ph/cp-ui.git"
 
     chartRepoName = "demo-repo"
-    chartRepoUrl = "https://pongsathorn-ph.github.io/bcc-ui/helm-chart/"
-    chartName = "bcc-ui-chart"
+    chartRepoUrl = "https://pongsathorn-ph.github.io/cp-ui/helm-chart/"
+    chartName = "cp-ui-chart"
     currentBuild = String.format("%04d", currentBuild.number)
     chartVersion = "${params.chartVersion}-${env.currentBuild}-${params.buildType}"
 
@@ -83,6 +83,7 @@ pipeline {
       steps {
         script {
           try {
+            echo "Checkout - Starting."
             cleanWs()
             checkout([$class: 'GitSCM', branches: [[name: "${env.gitBranch}"]], extensions: [], userRemoteConfigs: [[credentialsId: "${env.gitCredentialId}", url: "${env.gitRepoUrl}"]]])
             echo "Checkout - Completed."
@@ -98,12 +99,20 @@ pipeline {
     stage("Replace") {
       steps {
         script {
-          sh "sudo mkdir -p ${env.helmChartDir}/values"
-          replaceChart()
-          replaceValue()
-          replaceDeployment()
-          sh "sudo cp ${env.helmTemplateDir}/service.yaml ${env.helmChartDir}/templates"
-          sh "sudo ls -al ${env.helmChartDir}"
+          try {
+            echo "Replace - Starting."
+            sh "sudo mkdir -p ${env.helmChartDir}/assets"
+            replaceChart()
+            replaceValue()
+            replaceDeployment()
+            sh "sudo cp ${env.helmTemplateDir}/service.yaml ${env.helmChartDir}/templates"
+            sh "sudo ls -al ${env.helmChartDir}"
+            echo "Replace - Completed."
+          } catch(err) {
+            echo "Replace - Failed."
+            currentBuild.result = 'FAILURE'
+            error('Package stage failed.')
+          }
         }
       }
     }
