@@ -29,7 +29,7 @@ def replaceDeployment() {
 def helmUpgrade() {
   sh """
     sudo helm repo update ${env.chartRepoName}
-    sudo helm upgrade --install cp-ui ${env.chartRepoName}/${env.chartName} --namespace ${params.namespace} --create-namespace --version ${env.chartVersion} --kubeconfig ${env.kubeConfigDir} --debug --atomic --timeout 2m0s
+    sudo helm upgrade --install bcc-ui ${env.chartRepoName}/${env.chartName} --namespace ${params.namespace} --create-namespace --version ${env.chartVersion} --kubeconfig ${env.kubeConfigDir} --debug --atomic --timeout 2m0s
   """
 }
 
@@ -51,11 +51,11 @@ pipeline {
 
     gitCredentialId = "GITHUB-jenkins"
     gitBranch = "main"
-    gitRepoUrl = "https://github.com/pongsathorn-ph/cp-ui.git"
+    gitRepoUrl = "https://github.com/pongsathorn-ph/bcc-ui.git"
 
     chartRepoName = "demo-repo"
-    chartRepoUrl = "https://pongsathorn-ph.github.io/cp-ui/helm-chart/"
-    chartName = "cp-ui-chart"
+    chartRepoUrl = "https://pongsathorn-ph.github.io/bcc-ui/helm-chart/"
+    chartName = "bcc-ui-chart"
     currentBuild = String.format("%04d", currentBuild.number)
     chartVersion = "${params.chartVersion}-${env.currentBuild}-${params.buildType}"
 
