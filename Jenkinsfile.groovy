@@ -163,8 +163,10 @@ pipeline {
                   git checkout -b ${env.GIT_BRANCH_NAME}
                   git add .
                   git commit -m 'Update from Jenkins-Pipeline'
-                  git push https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/png-iapi-chart.git ${env.GIT_BRANCH_NAME}
                 """
+                withCredentials([gitUsernamePassword(credentialsId: "${env.GITHUB_CREDENTIAL_ID}", gitToolName: 'Default')]) {
+                  sh "git push origin ${env.GIT_BRANCH_NAME}"
+                }
                 echo 'GIT Commit - Completed.'
               } catch (err) {
                 echo 'GIT Commit - Failed.'
@@ -182,7 +184,7 @@ pipeline {
               catchError(buildResult: 'SUCCESS',stageResult: 'SUCCESS') {
                 sh """
                   git tag -d ${env.TAG_NAME_ALPHA}
-                  git push --delete https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/png-iapi-chart.git ${env.TAG_NAME_ALPHA}
+                  git push --delete https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/bcc-ui.git ${env.TAG_NAME_ALPHA}
                 """
               }
               echo 'Remove tag - Completed.'
@@ -197,7 +199,7 @@ pipeline {
                 echo 'Push tag - Starting.'
                 sh """
                   git tag ${env.TAG_NAME_ALPHA}
-                  git push https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/png-iapi-chart.git ${env.TAG_NAME_ALPHA}
+                  git push https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/bcc-ui.git ${env.TAG_NAME_ALPHA}
                 """
                 echo 'Push tag - Completed.'
               } catch (err) {
