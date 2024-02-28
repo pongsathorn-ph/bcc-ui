@@ -28,7 +28,7 @@ def gitCheckout(String tagName) {
   try {
     echo 'Checkout - Starting.'
     cleanWs()
-    checkout([$class: 'GitSCM', branches: [[name: "${tagName}"]], extensions: [], userRemoteConfigs: [[credentialsId: "${env.GITHUB_CREDENTIAL_ID}", url: "${env.GIT_REPO_URL}"]]])
+    checkout([$class: 'GitSCM', branches: [[name: tagName]], extensions: [], userRemoteConfigs: [[credentialsId: env.GITHUB_CREDENTIAL_ID, url: env.GIT_REPO_URL]]])
     echo 'Checkout - Completed.'
   } catch (err) {
     echo 'Checkout - Failed.'
@@ -213,64 +213,93 @@ pipeline {
       }
     }
 
-    // stage('Build Tag') {
-    //   when {
-    //     expression {
-    //       params.buildType == 'RELEASE TAG'// && params.chartVersion == env.tagVersion
-    //     }
-    //   }
-    //   stages {
-    //     stage('Checkout') {
-    //       steps {
-    //         script {
-    //           currentBuild.displayName = "${currentBuild.displayName} : TAG 🏷️"
-    //           checkout("refs/tags/${env.TAG_NAME_ALPHA}")
-    //         }
-    //       }
-    //     }
+    stage('Build Tag') {
+      when {
+        expression {
+          params.buildType == 'RELEASE TAG'// && params.chartVersion == env.tagVersion
+        }
+      }
+      stages {
+        stage('Checkout') {
+          steps {
+            script {
+              currentBuild.displayName = "${currentBuild.displayName} : TAG 🏷️"
+              gitCheckout("refs/tags/${env.TAG_NAME_ALPHA}")
+            }
+          }
+        }
 
-    //     state('Replace') {
-    //       steps {
-    //         script {
-    //           replaceChart()
-    //         }
-    //       }
-    //     }
+        stage('Replace') {
+          steps {
+            script {
+              try {
+                echo "Replace - Starting."
+                replaceChart("${params.chartVersion}")
+                echo "Replace - Completed."
+              } catch(err) {
+                echo "Replace - Failed."
+                currentBuild.result = 'FAILURE'
+                error(err.message)
+              }
+            }
+          }
+        }
 
-    //     stage('Push tag') {
-    //       steps {
-    //         script {
-    //           try {
-    //             echo 'Push tag - Starting.'
-    //             sh """
-    //               git tag ${params.chartVersion}
-    //               git push https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/png-iapi-chart.git ${params.chartVersion}
-    //             """
-    //             echo 'Push tag - Completed.'
-    //           } catch (err) {
-    //             echo 'Push tag - Failed.'
-    //             currentBuild.result = 'FAILURE'
-    //             error(err.message)
-    //           }
-    //         }
-    //       }
+        stage('Remove alpha') {
+          steps {
+            script {
+              try {
+                echo "Remove alpha - Starting."
 
-    //       post {
-    //         success {
-    //           script {
-    //             if (currentBuild.result == "SUCCESS") {
-    //               catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
-    //                 sh """
-    //                   git tag -d ${env.TAG_NAME_ALPHA}
-    //                   git push --delete https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/png-iapi-chart.git ${env.TAG_NAME_ALPHA}
-    //                 """
-    //               }
-    //             }
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
+                sh """
+                  rm -f ${env.HELM_CHART_DIR}/assets/*-ALPHA.tgz
+                  sudo ls -l ${env.HELM_CHART_DIR}/assets/
+                """
+
+                echo "Remove alpha - Completed."
+              } catch(err) {
+                echo "Remove alpha - Failed."
+                currentBuild.result = 'FAILURE'
+                error(err.message)
+              }
+            }
+          }
+        }
+
+        // stage('Push tag') {
+        //   steps {
+        //     script {
+        //       try {
+        //         echo 'Push tag - Starting.'
+        //         sh """
+        //           git tag ${params.chartVersion}
+        //           git push https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/bcc-ui.git ${params.chartVersion}
+        //         """
+        //         echo 'Push tag - Completed.'
+        //       } catch (err) {
+        //         echo 'Push tag - Failed.'
+        //         currentBuild.result = 'FAILURE'
+        //         error(err.message)
+        //       }
+        //     }
+        //   }
+
+        //   post {
+        //     success {
+        //       script {
+        //         if (currentBuild.result == "SUCCESS") {
+        //           catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+        //             sh """
+        //               git tag -d ${env.TAG_NAME_ALPHA}
+        //               git push --delete https://$GITHUB_CREDENTIAL_USR:$GITHUB_CREDENTIAL_PSW@github.com/pongsathorn-ph/bcc-ui.git ${env.TAG_NAME_ALPHA}
+        //             """
+        //           }
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
+      }
+    }
   }
 }
