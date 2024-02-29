@@ -6,12 +6,8 @@ def replaceTemplate(String fileName, String outputPath, Map replacementMap) {
 
 def getChartName() {
   def yaml = readYaml file: "${env.HELM_TEMPLATE_DIR}/Chart.yaml"
-  env.CHART_NAME = yaml.name
-}
-
-def checkoutProcess(String tagName) {
-  cleanWs()
-  checkout([$class: 'GitSCM', branches: [[name: tagName]], extensions: [], userRemoteConfigs: [[credentialsId: env.GITHUB_CREDENTIAL_ID, url: "https://${env.GIT_REPO}"]]])
+  def data = yaml.name
+  return data
 }
 
 def packageProcess() {
@@ -24,6 +20,11 @@ def packageProcess() {
     sudo mv ${env.HELM_CHART_DIR}/temp/index.yaml ${env.HELM_CHART_DIR}/
     sudo rm -rf ${env.HELM_CHART_DIR}/temp
   """
+}
+
+def gitCheckoutProcess(String tagName) {
+  cleanWs()
+  checkout([$class: 'GitSCM', branches: [[name: tagName]], extensions: [], userRemoteConfigs: [[credentialsId: env.GITHUB_CREDENTIAL_ID, url: "https://${env.GIT_REPO}"]]])
 }
 
 def gitCommitPushProcess() {
@@ -74,11 +75,11 @@ pipeline {
     GIT_BRANCH_NAME = "main"
     GIT_REPO = "github.com/pongsathorn-ph/bcc-ui.git"
 
-    CHART_NAME = ""
+    CHART_NAME = "bcc-ui-chart"
     CHART_VERSION = "${params.chartVersion}-${env.BUILD_NUMBER}-${params.buildType}"
 
-    IMAGE_REPO_ALPHA = "pongsathorn/demo-ui-dev"
     IMAGE_REPO_PRE = "pongsathorn/demo-ui-pre"
+    IMAGE_REPO_ALPHA = "pongsathorn/demo-ui-dev"
     IMAGE_REPO_PRO = "pongsathorn/demo-ui-pro"
 
     TAG_NAME_PRE = "${params.chartVersion}-PRE-ALPHA"
@@ -120,8 +121,7 @@ pipeline {
             script {
               try {
                 echo 'Checkout - Starting.'
-                gitCheckout("${env.GIT_BRANCH_NAME}") // FIXME จะต้อง checkout จาก PRE_ALPHA
-                getChartName()
+                gitCheckoutProcess("${env.GIT_BRANCH_NAME}") // FIXME จะต้อง checkout จาก PRE_ALPHA
                 echo 'Checkout - Completed.'
               } catch (err) {
                 echo 'Checkout - Failed.'
@@ -170,7 +170,7 @@ pipeline {
           }
         }
 
-        stage('Git commit and push') {
+        stage('Commit and Push') {
           steps {
             script {
               try {
@@ -211,6 +211,11 @@ pipeline {
             }
           }
         }
+
+        // เพิ่ม stage เรียก Job ของ PNG-IAPI_WEB
+        // stage('Call PNG-IAPI_WEB') {
+        //
+        // }
       }
     }
 
@@ -234,8 +239,7 @@ pipeline {
             script {
               try {
                 echo 'Checkout - Starting.'
-                gitCheckout("refs/tags/${env.TAG_NAME_ALPHA}")
-                getChartName()
+                gitCheckoutProcess("refs/tags/${env.TAG_NAME_ALPHA}")
                 echo 'Checkout - Completed.'
               } catch (err) {
                 echo 'Checkout - Failed.'
@@ -326,7 +330,7 @@ pipeline {
           }
         }
 
-        stage('Git commit and push') {
+        stage('Commit and Push') {
           steps {
             script {
               try {
@@ -361,6 +365,7 @@ pipeline {
             success {
               script {
                 if (currentBuild.result == "SUCCESS") {
+                  gitRemoveTagProcess("${env.TAG_NAME_PRE_ALPHA}")
                   gitRemoveTagProcess("${env.TAG_NAME_ALPHA}")
                 }
               }
