@@ -141,7 +141,7 @@ pipeline {
 
                 replaceTemplate("Chart.yaml", "${env.HELM_CHART_DIR}/Chart.yaml", ["{{CHART_VERSION}}": "${env.CHART_VERSION}"])
                 replaceTemplate("values.yaml", "${env.HELM_CHART_DIR}/values/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
-                replaceTemplate("deployment.yaml", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.imageRepoDev}"])
+                replaceTemplate("deployment.yaml", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
 
                 sh "sudo cp ${env.HELM_TEMPLATE_DIR}/service.yaml ${env.HELM_CHART_DIR}/templates"
                 echo "Replace - Completed."
