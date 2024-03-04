@@ -139,11 +139,10 @@ pipeline {
                 echo "Replace - Starting."
                 sh "sudo mkdir -p ${env.HELM_CHART_DIR}/assets"
 
-                replaceTemplate("Chart.yaml", "${env.HELM_CHART_DIR}/Chart.yaml", ["{{CHART_VERSION}}": "${env.CHART_VERSION}"])
-                replaceTemplate("values.yaml", "${env.HELM_CHART_DIR}/values/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
-                replaceTemplate("deployment.yaml", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
+                replaceTemplate("Chart.temp", "${env.HELM_CHART_DIR}/Chart.yaml", ["{{CHART_VERSION}}": "${env.CHART_VERSION}"])
+                replaceTemplate("values.temp", "${env.HELM_CHART_DIR}/values/values-dev.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
+                replaceTemplate("deployment.temp", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_ALPHA}"])
 
-                sh "sudo cp ${env.HELM_TEMPLATE_DIR}/service.yaml ${env.HELM_CHART_DIR}/templates"
                 echo "Replace - Completed."
               } catch(err) {
                 echo "Replace - Failed."
@@ -313,10 +312,10 @@ pipeline {
             script {
               try {
                 echo "Replace - Starting."
-                replaceTemplate("Chart.yaml", "${env.HELM_CHART_DIR}/Chart.yaml", ["{{CHART_VERSION}}": "${params.chartVersion}"])
-                replaceTemplate("values.yaml", "${env.HELM_CHART_DIR}/values/values-pre.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_PRE}"])
-                replaceTemplate("values.yaml", "${env.HELM_CHART_DIR}/values/values-pro.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_PRO}"])
-                replaceTemplate("deployment.yaml", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "{{.Values.image.repository}}"])
+                replaceTemplate("Chart.temp", "${env.HELM_CHART_DIR}/Chart.yaml", ["{{CHART_VERSION}}": "${params.chartVersion}"])
+                replaceTemplate("values.temp", "${env.HELM_CHART_DIR}/values/values-pre.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_PRE}"])
+                replaceTemplate("values.temp", "${env.HELM_CHART_DIR}/values/values-pro.yaml", ["{{IMAGE_REPO}}": "${env.IMAGE_REPO_PRO}"])
+                replaceTemplate("deployment.temp", "${env.HELM_CHART_DIR}/templates/deployment.yaml", ["{{IMAGE_REPO}}": "{{.Values.image.repository}}"])
                 echo "Replace - Completed."
               } catch(err) {
                 echo "Replace - Failed."
