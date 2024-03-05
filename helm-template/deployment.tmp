@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: bcc-ui-app
-          image: "{{IMAGE_REPO}}:2024.02.00-0001-alpha"
+          image: "pongsathorn/demo-ui-dev:2024.02.00-0001-alpha"
           env:
             - name: SERVER_URL
               valueFrom:
