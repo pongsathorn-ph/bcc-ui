@@ -11,5 +11,5 @@ docker push pongsathorn/demo-api-dev:2024.02.00-0001-alpha
 
 #### Create ConfigMap
 ```sh
-kubectl create configmap demo-ui-dev-properties-configmap --from-env-file=config-map-dev.properties --namespace=beam-namespace
+kubectl create configmap bcc-ui-configmap --from-env-file=config-map-dev.properties --namespace=png-iapi-namespace
 ```
