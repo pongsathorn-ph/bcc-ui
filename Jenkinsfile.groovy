@@ -221,7 +221,7 @@ pipeline {
                     string(name: 'chartName', value: "bcc"),
                     string(name: 'chartVersion', value: "${params.chartVersion}"),
                     string(name: 'buildType', value: "${params.buildType}"),
-                    string(name: 'uiDependencyVersion', value: "${env.CHART_VERSION}")
+                    string(name: 'uiDependencyVersion', value: "~${env.CHART_VERSION}")
                 ]
 
                 build job: 'PNG-IAPI/PNG-IAPI_WEB', parameters: jobParams
