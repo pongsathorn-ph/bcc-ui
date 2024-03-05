@@ -1,0 +1,6 @@
+apiVersion: v2
+name: bcc-ui-chart
+description: A Helm chart for Kubernetes
+type: application
+version: "{{CHART_VERSION}}"
+appVersion: "0.0.1"
